@@ -35,7 +35,7 @@ class MTGraph(
     outputIds: List<Int>,
     private val gates: Map<Int, MTGate>,
     private val levels: Array<List<MTGate>>,
-    threadSize: Int
+    private val threadSize: Int
 ): GraphI {
 
     val inputsGate: List<MTInputGate> by lazy {
@@ -57,8 +57,9 @@ class MTGraph(
 //            }
 //        }
 
-    private val perm = InputPermutation(inputsMap.size)
-    private val threads = Array<Thread>(threadSize) {
+//    private val perm = InputPermutation(inputsMap.size)
+    private val perm = InputPermutation(13)
+    private val threads = Array<GateEvaluateThread>(threadSize) {
         GateEvaluateThread(it)
     }
     private var count = 1
@@ -74,29 +75,52 @@ class MTGraph(
 
     override fun evaluateAll() {
         timestamp = System.currentTimeMillis()
+        startTime = System.currentTimeMillis()
         for (thread in threads) {
             thread.start()
         }
+        for (thread in threads) {
+            thread.join()
+        }
+//        println("${(System.currentTimeMillis() - startTime) / 1_000} second")
+    }
+    private var startTime = 0L
+    private var completeThread = 0
+    fun getInputComplete() {
+        completeThread++
+        if (completeThread == threadSize) {
+            println("${(System.currentTimeMillis() - startTime) / 1_000} second")
+        }
     }
 
-    private inner class GateEvaluateThread(val index: Int): Thread() {
+    inner class GateEvaluateThread(val index: Int): Thread() {
+        private val lock = Object()
+        private var completed = false
+        var inputCount = 0
 
         override fun run() {
+
             while (true) {
-                val gateInputs = synchronized(perm) {
+                val gateInputs =
+//                val gateInputs = synchronized(perm) {
                     when {
                         perm.hasNext() -> {
-                            getInputCount()
+//                            getInputCount()
                             perm.next()
+                            inputCount++
                         }
                         else -> null
                     }
-                } ?: break
-                setInput(index ,gateInputs)
-                evaluate(index)
+                        ?:break
+//                } ?: break
+                sleep(5)
+//                setInput(index ,gateInputs)
+//                evaluate(index)
             }
-
+//            println("thread: $index get $inputCount inputs")
         }
+
+
 
         fun evaluate(threadIndex: Int) {
 //            println(threadIndex)
@@ -117,8 +141,16 @@ class MTGraph(
 }
 
 fun main() {
-    val mtGraph = MTGraphBuilder(3).fromFile(FILE_NAME)
-    val stGraph = DefaultGraphBuilder.default.fromFile(FILE_NAME)
-    stGraph.evaluateAll()
+//    val mtGraph = MTGraphBuilder(20).fromFile(FILE_NAME)
+//    val stGraph = DefaultGraphBuilder.default.fromFile(FILE_NAME)
+//    mtGraph.evaluateAll()
+
+    for (i in 20 downTo 2) {
+        val mtGraph = MTGraphBuilder(i).fromFile(FILE_NAME)
+        val time = measureTime {
+            mtGraph.evaluateAll()
+        }
+        println("$i thread: ${time} ms")
+    }
 }
 

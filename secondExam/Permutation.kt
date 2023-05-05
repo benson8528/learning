@@ -47,7 +47,6 @@ class InputPermutation(val size: Int): Permutation {
             this.nextValue = null
 //        }
     }
-
     override fun next(): Array<Boolean> {
 //        val nextValue = this.nextValue?.copy()
         val nextValue = this.nextValue
@@ -78,7 +77,6 @@ fun main() {
         measure {
             while (perm.hasNext()) {
                 perm.next()
-
             }
         }
     }
