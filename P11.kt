@@ -119,19 +119,19 @@ open class Lexer(private val input: InputStream): InputStream() {
     }
 
     fun skipSpCrLfTab() {
-//        skip(' '.code, '\r'.code, '\n'.code, '\t'.code)
+        skip(' '.code, '\r'.code, '\n'.code, '\t'.code)
 
-        while (true) {
-            val next = peek()?.let { Char(it) }
-//            println("NEXT: '${next?.code}'; PUTBACK: '${putbackString()}'")
-
-            if (next == ' '||next == '\r'|| next == '\n'|| next == '\t') {
-                read()
-            }
-            else {
-                break
-            }
-        }
+//        while (true) {
+//            val next = peek()?.let { Char(it) }
+////            println("NEXT: '${next?.code}'; PUTBACK: '${putbackString()}'")
+//
+//            if (next == ' '||next == '\r'|| next == '\n'|| next == '\t') {
+//                read()
+//            }
+//            else {
+//                break
+//            }
+//        }
     }
 
     fun readDigits(): Int {
@@ -171,6 +171,20 @@ fun Lexer.expectEOF() = expect(-1)
 
 fun Lexer.probe(string: String) = probe(*string.toIntArray())
 fun Lexer.probeCrLf(): Boolean = probe("\r\n")
+fun Lexer.probeAlphabet(): Boolean {
+    val nextIsAlphabet = peek()
+        ?.let { it in 'a'.code..'z'.code || it in 'A'.code..'Z'.code }
+    return nextIsAlphabet == true
+}
+
+fun Lexer.readAlphabet(): String {
+    val sb = StringBuilder()
+    while (probeAlphabet()) {
+        sb.append(Char(read()))
+    }
+    return sb.toString()
+}
+
 fun Lexer.probeEOF(): Boolean = probe(-1)
 
 fun InputStream.fillUpOrZero(array: ByteArray, off: Int, len: Int = array.size - off) {

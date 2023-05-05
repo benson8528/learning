@@ -7,7 +7,6 @@ interface Permutation {
 
 
 class InputPermutation(val size: Int): Permutation {
-    var count = 0
 
     private var nextValue: Array<Boolean>?
 
@@ -33,7 +32,7 @@ class InputPermutation(val size: Int): Permutation {
     }
 
     override fun hasNext(): Boolean {
-        return nextValue != null && count <= 5000000
+        return nextValue != null
     }
 
     private fun advance() {
@@ -50,7 +49,6 @@ class InputPermutation(val size: Int): Permutation {
     }
 
     override fun next(): Array<Boolean> {
-        count ++
 //        val nextValue = this.nextValue?.copy()
         val nextValue = this.nextValue
         require(nextValue != null)

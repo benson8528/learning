@@ -8,7 +8,10 @@ interface Gate {
     val level: Int
 
     fun evaluate(): Boolean
+
 }
+
+
 
 // LogicGate
 //  +- UnaryGate
@@ -23,7 +26,7 @@ interface Gate {
 abstract class LogicGate: Gate {
     protected var _output: Boolean = false
 
-    override val output: Boolean get() = _output!!
+    override val output: Boolean get() = _output
 
 //    fun resetOutput() {
 //        _output = null
@@ -111,7 +114,10 @@ class BuffGate(inputId: Int): UnaryGate(inputId) {
 
 }
 
-class InputGate(var input: Boolean = false): LogicGate() {
+interface InputGateI: Gate
+
+class InputGate(var input: Boolean = false): LogicGate(), InputGateI {
+
     override val output: Boolean get() = input
 
     override val level: Int get() = 0

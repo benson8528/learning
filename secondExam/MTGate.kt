@@ -1,6 +1,5 @@
 package secondExam
 
-import com.sun.org.apache.xpath.internal.operations.Bool
 import kotlin.math.max
 
 interface MTGate: Gate {
@@ -11,13 +10,17 @@ interface MTGate: Gate {
 
     fun evaluate(index: Int): Boolean
     override fun evaluate(): Boolean = evaluate(0)
+
 }
 
 abstract class MTLogicGate(threadSize: Int): MTGate {
     override val outputs: Array<Boolean>
         get() = _outputs
     protected val _outputs: Array<Boolean> = Array(threadSize) { false }
-    abstract fun bindInput(gatesMap: Map<Int,MTGate>)
+
+
+    abstract fun bindInputs(gatesMap: Map<Int,MTGate>)
+
     protected fun error(gateId: Int): Nothing {
         error("Missing gate #$gateId")
     }
@@ -35,9 +38,10 @@ abstract class MTLogicGate(threadSize: Int): MTGate {
 abstract class MTUnaryGate(private val inputId: Int, threadSize: Int): MTGate, MTLogicGate(threadSize) {
     lateinit var input: MTGate
 
-    override fun bindInput(gatesMap: Map<Int, MTGate>) {
+    override fun bindInputs(gatesMap: Map<Int, MTGate>) {
         input = gatesMap[inputId] ?: error(inputId)
     }
+
 
     override val level get() = input.level + 1
 
@@ -53,7 +57,7 @@ abstract class MTBinaryGate(
     override val level
         get() = max(input1.level, input2.level)
 
-    override fun bindInput(gatesMap: Map<Int, MTGate>) {
+    override fun bindInputs(gatesMap: Map<Int, MTGate>) {
         input1 = gatesMap[inputId1] ?: error(inputId1)
         input2 = gatesMap[inputId2] ?: error(inputId2)
     }
@@ -64,7 +68,7 @@ abstract class MTMultiGate(private val inputIds: List<Int>, threadSize: Int): MT
     override val level: Int
         get() = inputs.maxOf { it.level } + 1
 
-    override fun bindInput(gatesMap: Map<Int, MTGate>) {
+    override fun bindInputs(gatesMap: Map<Int, MTGate>) {
         inputs = inputIds.map { gatesMap[it] ?: error(it) }
     }
 }
@@ -115,7 +119,11 @@ class MTNorGate(inputIds: List<Int>, threadSize: Int): MTMultiGate(inputIds, thr
     }
 }
 
-class MTInputGate(threadSize: Int):MTGate, MTLogicGate(threadSize) {
+class MTInputGate(threadSize: Int):MTLogicGate(threadSize), InputGateI {
+
+    override val outputs: Array<Boolean>
+        get() = input
+
     var input = Array(threadSize) { false }
     override val level: Int get() = 0
 
@@ -123,5 +131,5 @@ class MTInputGate(threadSize: Int):MTGate, MTLogicGate(threadSize) {
         return input[index]
     }
 
-    override fun bindInput(gatesMap: Map<Int, MTGate>) { }
+    override fun bindInputs(gatesMap: Map<Int, MTGate>) { }
 }

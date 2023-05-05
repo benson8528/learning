@@ -5,14 +5,15 @@ import java.util.LinkedList
 private const val FILE_NAME = "C:\\Users\\A273\\Desktop\\c432.txt"
 
 interface GraphI {
-    fun evaluateAll(): Any
+    fun evaluateAll()
 }
 
 class Graph(
     private val inputsMap: Map<Int, InputGate>,
-    private val outputsMap: Map<Int, LogicGate>,
-    private val gates: Map<Int, LogicGate>,
-    private val levels: Array<List<LogicGate>>
+//    private val outputsMap: Map<Int, Gate>,
+    private val outputIds: List<Int>,
+    private val gates: Map<Int, Gate>,
+    private val levels: Array<List<Gate>>
 ): GraphI {
     val inputGates: List<InputGate> by lazy { inputsMap.values.toList() }
 
@@ -20,8 +21,10 @@ class Graph(
     fun getInputGate(id: Int) = inputsMap[id]
 
     val outputGates: List<Gate> by lazy { outputsMap.values.toList() }
+    private val allGatesMap = gates + inputsMap
+    private val outputsMap = outputIds.associateWith { allGatesMap[it]!!}
 
-    val outputIds get() = outputsMap.keys
+//    val outputIds get() = outputsMap.keys
     fun getOutputGate(id: Int) = outputsMap[id]
 
     var inputValues: Array<Boolean>
@@ -62,39 +65,39 @@ class Graph(
         }
     }
 
-    override fun evaluateAll(): List<List<Boolean>> {
+    override fun evaluateAll() {
 
-        for (level in levels.indices) {
-            println("level no.$level : ${levels[level].size} gates")
-        }
+//        for (level in levels.indices) {
+//            println("level no.$level : ${levels[level].size} gates")
+//        }
 
         val inputIds = inputsMap.keys
         val perm = InputPermutation(inputIds.size)
 //        val results = mutableListOf<List<Boolean>>()
         val results = LinkedList<List<Boolean>>()
 
-//        var count = 0
-//        var timestamp = System.currentTimeMillis()
+        var count = 0
+        var timestamp = System.currentTimeMillis()
 
         while (perm.hasNext()) {
             inputValues = perm.next()
 //            println(gateInput.values)
             evaluate()
-//            println(outputs)
+//            println(outputValues)
 //            results.add(outputValues)
 
-//            count++
-//            if (count % 1_000_000 == 0) {
-//                val old = timestamp
-//                timestamp = System.currentTimeMillis()
-//                println("${(timestamp - old) / 1000} seconds")
-//            }
+            count++
+            if (count % 1_000_000 == 0) {
+                val old = timestamp
+                timestamp = System.currentTimeMillis()
+                println("${(timestamp - old) / 1000} seconds")
+            }
         }
-        levelTime.forEach {
-            print("$it ")
-            println()
-        }
-        return results
+//        levelTime.forEach {
+//            print("$it ")
+//            println()
+//        }
+//        return results
     }
 
 }
@@ -122,7 +125,7 @@ fun String.subStringBetween(first: String, second: String): String {
 }
 
 fun main() {
-    val c17 = GraphBuilder.default.fromFile(FILE_NAME)
+    val c17 = DefaultGraphBuilder.default.fromFile(FILE_NAME)
     val map = mapOf<Int, Boolean>(
         Pair(1, true),
         Pair(2, false),
