@@ -11,9 +11,8 @@ interface GraphI {
 
 class Graph(
     private val inputsMap: Map<Int, InputGate>,
-    private val outputIds: List<Int>,
-    private val gates: Map<Int, Gate>,
-    private val levels: Array<List<Gate>>
+    private val outputsMap: Map<Int, Gate>,
+    private val levels: Array<out List<Gate>>
 ): GraphI {
     val inputGates: List<InputGate> by lazy { inputsMap.values.toList() }
 
@@ -21,8 +20,6 @@ class Graph(
     fun getInputGate(id: Int) = inputsMap[id]
 
     val outputGates: List<Gate> by lazy { outputsMap.values.toList() }
-    private val allGatesMap = gates + inputsMap
-    private val outputsMap = outputIds.associateWith { allGatesMap[it]!!}
     fun getOutputGate(id: Int) = outputsMap[id]
 
     var inputValues: Array<Boolean>

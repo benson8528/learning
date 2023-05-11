@@ -4,7 +4,6 @@ import java.util.*
 
 const val EOF = -1
 
-private const val DEFULT_PROBE_LIMIT = 1024
 open class Lexer(private val input: InputStream): InputStream() {
 
     private data class Node(

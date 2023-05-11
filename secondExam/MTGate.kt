@@ -11,8 +11,6 @@ interface MTGate: Gate {
     fun evaluate(index: Int): Boolean
     override fun evaluate(): Boolean = evaluate(0)
 
-
-
 }
 
 abstract class MTLogicGate(threadSize: Int): MTGate {
@@ -21,6 +19,8 @@ abstract class MTLogicGate(threadSize: Int): MTGate {
     private val _outputs: Array<Boolean> = Array(threadSize) { false }
 
     abstract fun bindInputs(gatesMap: Map<Int,MTGate>)
+
+
 
     protected fun error(gateId: Int): Nothing {
         error("Missing gate #$gateId")
@@ -38,6 +38,8 @@ abstract class MTLogicGate(threadSize: Int): MTGate {
 
 abstract class MTUnaryGate(private val inputId: Int, threadSize: Int): MTGate, MTLogicGate(threadSize) {
     lateinit var input: MTGate
+
+
 
     override fun bindInputs(gatesMap: Map<Int, MTGate>) {
         input = gatesMap[inputId] ?: error(inputId)

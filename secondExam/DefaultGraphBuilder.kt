@@ -19,7 +19,6 @@ import java.io.InputStream
 
 abstract class GraphParser<T : Gate> {
 
-
     private fun Lexer.expectComment() {
         this.expect("#")
         this.readTill("\r\n")
@@ -66,7 +65,7 @@ abstract class GraphParser<T : Gate> {
 
         val type = this.readAlphabet()
         val gate = this.expectGate {
-            createGate(type, it)
+            this@GraphParser.createGate(type, it)
         }
 
         return Pair(id, gate)
@@ -115,13 +114,14 @@ abstract class GraphParser<T : Gate> {
 }
 
 
-class DefaultGraphParser private constructor(): GraphParser<Gate>() {
+class DefaultGraphParser private constructor(): GraphParser<LogicGate>() {
     companion object {
         val default = DefaultGraphParser()
     }
 
-    override fun createGate(type: String, inputIds: List<Int>): Gate {
-        return stGateFactories[type]?.create(inputIds)!!
+    override fun createGate(type: String, inputIds: List<Int>): LogicGate {
+        return stGateFactories[type]?.create(inputIds)
+            ?: error("CANNOT CREATE GATE '$type'")
     }
 }
 
@@ -143,50 +143,52 @@ abstract class GraphBuilder<T: Gate, U: InputGateI>: GraphBuilderI {
 
     protected abstract fun parsingFile(lexer: Lexer): GraphParser.ParsingResult<T>
     protected abstract fun createInputsMap(inputIds: List<Int>) : Map<Int,U>
-    protected abstract fun bindInput(inputsMap: Map<Int, U>, gates: Map<Int, T>)
+
+    protected abstract fun bindGates(gatesMap: Map<Int, T>)
+
     protected abstract fun createGraph(
         inputsMap: Map<Int, U>,
-        outputIds: List<Int>,
-        gates: Map<Int, T>,
+        outputsMap: Map<Int, T>,
         levels: Array<List<T>>): GraphI
 
+    protected abstract fun getAllGates(inputsMap: Map<Int, U>, gatesMap: Map<Int, T>): Map<Int, T>
+
     override fun fromStream(istream: InputStream): GraphI {
-        val (inputIds, outputIds, gates) =
+        val (inputIds, outputIds, gatesMap) =
             parsingFile(Lexer(istream))
 
         val inputsMap = createInputsMap(inputIds)
+        val allGatesMap = getAllGates(inputsMap, gatesMap)
+        val outputsMap = outputIds.associateWith { allGatesMap[it]!! }
 
         // 2nd pass
-        bindInput(inputsMap, gates)
-
-
+        bindGates(allGatesMap)
 
         // 3rd pass
         val maxLevel = outputIds
-            .mapNotNull { gates[it] }
+            .mapNotNull { gatesMap[it] }
             .maxOf {
                 it.level
             }
 
         val levels = Array<List<T>>(maxLevel + 1) { index ->
-            gates.values.filter { gate ->
+            gatesMap.values.filter { gate ->
                 gate.level == index
             }
         }
 
-        return createGraph(inputsMap, outputIds, gates, levels)
+        return createGraph(inputsMap, outputsMap, levels)
     }
-
 }
 
 
 
-class DefaultGraphBuilder private constructor(): GraphBuilder<Gate,InputGate>() {
-    companion object {
+class DefaultGraphBuilder private constructor(): GraphBuilder<LogicGate,InputGate>() {
+    companion object { // static properties and methods
         val default: GraphBuilderI = DefaultGraphBuilder()
     }
 
-    override fun parsingFile(lexer: Lexer): GraphParser.ParsingResult<Gate> {
+    override fun parsingFile(lexer: Lexer): GraphParser.ParsingResult<LogicGate> {
         return DefaultGraphParser.default.parse(lexer)
     }
 
@@ -194,19 +196,22 @@ class DefaultGraphBuilder private constructor(): GraphBuilder<Gate,InputGate>() 
         return inputIds.associateWith { InputGate() }
     }
 
-    override fun createGraph(
-        inputsMap: Map<Int, InputGate>,
-        outputIds: List<Int>,
-        gates: Map<Int, Gate>,
-        levels: Array<List<Gate>>
-    ): GraphI {
-        return Graph(inputsMap, outputIds, gates, levels)
-    }
-
-    override fun bindInput(inputsMap: Map<Int, InputGate>, gates: Map<Int, Gate>) {
-        val allGatesMap = inputsMap + gates
-        for (gate in gates) {
-            (gate.value as LogicGate).bindInputs(allGatesMap)
+    override fun bindGates(gatesMap: Map<Int, LogicGate>) {
+        for ((_, gate) in gatesMap) {
+            gate.bindInputs(gatesMap)
         }
     }
+
+    override fun createGraph(
+        inputsMap: Map<Int, InputGate>,
+        outputsMap: Map<Int, LogicGate>,
+        levels: Array<List<LogicGate>>
+    ): GraphI {
+        return Graph(inputsMap, outputsMap, levels)
+    }
+
+    override fun getAllGates(
+        inputsMap: Map<Int, InputGate>,
+        gatesMap: Map<Int, LogicGate>
+    ): Map<Int, LogicGate> = inputsMap + gatesMap
 }

@@ -1,13 +1,11 @@
 package secondExam
 
-import Lexer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.*
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
 import kotlin.concurrent.thread
 
 private const val FILE_NAME = "C:\\Users\\A273\\Desktop\\c432.txt"
@@ -23,23 +21,18 @@ private const val INIT_DELAY = 3_000L
 
 open class MTGraph(
     private val inputsMap: Map<Int, MTInputGate>,
-    outputIds: List<Int>,
-    private val gates: Map<Int, MTGate>,
-    private val levels: Array<List<MTGate>>,
+    private val outputsMap: Map<Int, MTGate>,
+    private val levels: Array<out List<MTGate>>,
     protected val threadSize: Int
 ): GraphI {
 
-    val inputsGate: List<MTInputGate> by lazy {
-        inputsMap.values.toList()
-    }
+    val inputGates: List<MTInputGate> by lazy { inputsMap.values.toList() }
 
-    val outputsMap: Map<Int, MTGate> =
-        outputIds.associateWith { inputsMap[it] ?: gates[it] ?: error("missing gate") }
+    val outputGates: List<MTGate> by lazy { outputsMap.values.toList() }
 
-    fun outputValue(threadIndex: Int): List<Boolean> {
+    fun outputValues(threadIndex: Int): List<Boolean> {
         return outputsMap.values.map { it.outputs[threadIndex] }
     }
-
 
     override fun evaluateAll() {
         val perm = LimitedInputPermutation(inputsMap.size, LIMIT_SIZE)
@@ -55,7 +48,6 @@ open class MTGraph(
                 }
             }
 
-
         thread { // Dispatch thread
             var index = 0
             while (perm.hasNext()) {
@@ -65,7 +57,6 @@ open class MTGraph(
         }
 
         Thread.sleep(INIT_DELAY)
-
 
         doEvaluate(perms)
 
@@ -81,7 +72,6 @@ open class MTGraph(
             }
     }
 
-
     fun evaluate(index: Int) {
         for (level in levels) {
             for (gate in level) {
@@ -91,7 +81,7 @@ open class MTGraph(
     }
 
     fun setInput(index: Int, inputs: Array<Boolean>) {
-        inputsGate.forEachIndexed { i, mtInputGate ->
+        inputGates.forEachIndexed { i, mtInputGate ->
             mtInputGate.inputs[index] = inputs[i]
         }
     }
@@ -122,11 +112,10 @@ open class MTGraph(
 
 class CoroutineMTGraph(
     inputsMap: Map<Int, MTInputGate>,
-    outputIds: List<Int>,
-    gates: Map<Int, MTGate>,
-    levels: Array<List<MTGate>>,
+    outputsMap: Map<Int, MTGate>,
+    levels: Array<out List<MTGate>>,
     threadSize: Int
-): MTGraph(inputsMap, outputIds, gates, levels, threadSize) {
+): MTGraph(inputsMap, outputsMap, levels, threadSize) {
     private suspend fun execute(perms: List<Permutation>) = coroutineScope {
         repeat(threadSize) { index ->
             launch(Dispatchers.IO) {
@@ -145,11 +134,10 @@ class CoroutineMTGraph(
 
 class ThreadPoolMTGraph(
     inputsMap: Map<Int, MTInputGate>,
-    outputIds: List<Int>,
-    gates: Map<Int, MTGate>,
-    levels: Array<List<MTGate>>,
+    outputsMap: Map<Int, MTGate>,
+    levels: Array<out List<MTGate>>,
     threadSize: Int
-): MTGraph(inputsMap, outputIds, gates, levels, threadSize) {
+): MTGraph(inputsMap, outputsMap, levels, threadSize) {
     override fun doEvaluate(perms: List<Permutation>) {
         val threadPool = Executors.newFixedThreadPool(threadSize)
         (0 until threadSize)
@@ -167,9 +155,9 @@ fun main() {
     repeat(1) {
         for (i in MIN_CPU_SIZE .. MAX_CPU_SIZE) {
             println("------------")
-//            val mtGraph = MTGraphBuilder(i).fromFile(FILE_NAME)
-//            val mtGraph = CoroutineMTGraphBuilder(i).fromFile(FILE_NAME)
-            val mtGraph = ThreadPoolMTGraphBuilder(i).fromFile(FILE_NAME)
+            val mtGraph = MTGraphBuilder.getBuilder(i).fromFile(FILE_NAME)
+//            val mtGraph = CoroutineMTGraphBuilder.getBuilder(i).fromFile(FILE_NAME)
+//            val mtGraph = ThreadPoolMTGraphBuilder.getBuilder(i).fromFile(FILE_NAME)
             val time = measureTime {
                 mtGraph.evaluateAll()
             }

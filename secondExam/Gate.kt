@@ -9,10 +9,8 @@ interface Gate {
 
     fun evaluate(): Boolean
 
-//    fun <T: Gate> bindInputs(gatesMap: Map<Int, T>)
+//    fun bindInputs(gatesMap: Map<Int, Gate>)
 }
-
-
 
 // LogicGate
 //  +- UnaryGate

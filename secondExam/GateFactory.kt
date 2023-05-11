@@ -2,7 +2,7 @@ package secondExam
 
 // Factory, Singleton
 
-interface GateFactory<T: Gate> {
+interface GateFactory<T: LogicGate> {
     fun create(inputIds: List<Int>): T
 }
 
@@ -91,8 +91,6 @@ class BuffGateFactory private constructor(): GateFactory<BuffGate> {
     }
 }
 
-
-
 val stGateFactories: Map<String, GateFactory<*>> = mapOf(
     "AND" to AndGateFactory.default,
     "NAND" to NandGateFactory.default,
@@ -104,7 +102,9 @@ val stGateFactories: Map<String, GateFactory<*>> = mapOf(
     "BUFF" to BuffGateFactory.default
 )
 
-interface MTGateFactory<T: MTGate>{
+
+
+interface MTGateFactory<T: MTLogicGate>{
     fun create(inputIds: List<Int>, threadSize: Int): T
 }
 

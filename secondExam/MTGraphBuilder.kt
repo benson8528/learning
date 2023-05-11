@@ -2,14 +2,22 @@ package secondExam
 
 import Lexer
 
-class MTGraphParser(private val threadSize: Int): GraphParser<MTGate>() {
-    override fun createGate(type: String, inputIds: List<Int>): MTGate {
+class MTGraphParser(private val threadSize: Int): GraphParser<MTLogicGate>() {
+    override fun createGate(type: String, inputIds: List<Int>): MTLogicGate {
         return mtGateFactories[type]?.create(inputIds, threadSize)!!
     }
 }
 
-open class MTGraphBuilder(protected val threadSize: Int): GraphBuilder<MTGate, MTInputGate>() {
-    override fun parsingFile(lexer: Lexer): GraphParser.ParsingResult<MTGate> {
+open class MTGraphBuilder protected constructor(protected val threadSize: Int)
+: GraphBuilder<MTLogicGate, MTInputGate>() {
+    companion object {
+        private val builders = mutableMapOf<Int,MTGraphBuilder>()
+        fun getBuilder(threadSize: Int): MTGraphBuilder {
+            return builders[threadSize] ?: MTGraphBuilder(threadSize).also { builders[threadSize] = it }
+        }
+    }
+
+    override fun parsingFile(lexer: Lexer): GraphParser.ParsingResult<MTLogicGate> {
         return MTGraphParser(threadSize).parse(lexer)
     }
 
@@ -17,42 +25,59 @@ open class MTGraphBuilder(protected val threadSize: Int): GraphBuilder<MTGate, M
         return inputIds.associateWith { MTInputGate(threadSize) }
     }
 
+    override fun getAllGates(
+        inputsMap: Map<Int, MTInputGate>,
+        gatesMap: Map<Int, MTLogicGate>
+    ): Map<Int, MTLogicGate> = inputsMap + gatesMap
+
     override fun createGraph(
         inputsMap: Map<Int, MTInputGate>,
-        outputIds: List<Int>,
-        gates: Map<Int, MTGate>,
-        levels: Array<List<MTGate>>
+        outputsMap: Map<Int, MTLogicGate>,
+        levels: Array<List<MTLogicGate>>
     ): GraphI {
-        return MTGraph(inputsMap, outputIds, gates, levels, threadSize)
+        return MTGraph(inputsMap, outputsMap, levels, threadSize)
     }
 
-    override fun bindInput(inputsMap: Map<Int, MTInputGate>, gates: Map<Int, MTGate>) {
-        val allGatesMap = inputsMap + gates
-        for (gate in gates) {
-            (gate.value as MTLogicGate).bindInputs(allGatesMap)
+    override fun bindGates(gatesMap: Map<Int, MTLogicGate>) {
+        for ((_,gate) in gatesMap) {
+            gate.bindInputs(gatesMap)
         }
     }
 }
 
-class CoroutineMTGraphBuilder(threadSize: Int) : MTGraphBuilder(threadSize) {
+class CoroutineMTGraphBuilder private constructor(threadSize: Int) : MTGraphBuilder(threadSize) {
+    companion object {
+        private val builders = mutableMapOf<Int, CoroutineMTGraphBuilder>()
+        fun getBuilder(threadSize: Int): CoroutineMTGraphBuilder {
+            return builders[threadSize]
+                ?: CoroutineMTGraphBuilder(threadSize).also { builders[threadSize] = it }
+        }
+    }
+
     override fun createGraph(
         inputsMap: Map<Int, MTInputGate>,
-        outputIds: List<Int>,
-        gates: Map<Int, MTGate>,
-        levels: Array<List<MTGate>>
+        outputsMap: Map<Int, MTLogicGate>,
+        levels: Array<List<MTLogicGate>>
     ): GraphI {
-        return CoroutineMTGraph(inputsMap, outputIds, gates, levels, threadSize)
+        return CoroutineMTGraph(inputsMap, outputsMap, levels, threadSize)
     }
 }
 
-class ThreadPoolMTGraphBuilder(threadSize: Int): MTGraphBuilder(threadSize) {
+class ThreadPoolMTGraphBuilder private constructor(threadSize: Int): MTGraphBuilder(threadSize) {
+    companion object {
+        private val builders = mutableMapOf<Int,ThreadPoolMTGraphBuilder>()
+        fun getBuilder(threadSize: Int): ThreadPoolMTGraphBuilder {
+            return builders[threadSize]
+                ?:ThreadPoolMTGraphBuilder(threadSize).also { builders[threadSize] = it }
+        }
+    }
+
     override fun createGraph(
         inputsMap: Map<Int, MTInputGate>,
-        outputIds: List<Int>,
-        gates: Map<Int, MTGate>,
-        levels: Array<List<MTGate>>
+        outputsMap: Map<Int, MTLogicGate>,
+        levels: Array<List<MTLogicGate>>
     ): GraphI {
-        return ThreadPoolMTGraph(inputsMap, outputIds, gates, levels, threadSize)
+        return ThreadPoolMTGraph(inputsMap, outputsMap, levels, threadSize)
     }
 }
 

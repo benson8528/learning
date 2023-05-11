@@ -11,7 +11,7 @@ private const val CONTENT = "# c17     \r\n# 5"
 
 fun main() {
     val istream = ByteArrayInputStream(CONTENT.toByteArray())
-val lexer = Lexer(istream)
+    val lexer = Lexer(istream)
 
     if (lexer.probe("\r\n")) {
         error("???")
@@ -28,11 +28,4 @@ val lexer = Lexer(istream)
     }
 
 //    val graph = GraphBuilder.default.fromStream(istream)
-
-
 }
-
-
-//MTGraphBuilder
-//MTGraphParser
-//
