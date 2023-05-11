@@ -11,13 +11,14 @@ interface MTGate: Gate {
     fun evaluate(index: Int): Boolean
     override fun evaluate(): Boolean = evaluate(0)
 
+
+
 }
 
 abstract class MTLogicGate(threadSize: Int): MTGate {
     override val outputs: Array<Boolean>
         get() = _outputs
-    protected val _outputs: Array<Boolean> = Array(threadSize) { false }
-
+    private val _outputs: Array<Boolean> = Array(threadSize) { false }
 
     abstract fun bindInputs(gatesMap: Map<Int,MTGate>)
 
@@ -29,7 +30,7 @@ abstract class MTLogicGate(threadSize: Int): MTGate {
         require(index < outputs.size)
         return outputs[index]
     }
-    abstract fun doEvaluate(index: Int): Boolean
+    protected abstract fun doEvaluate(index: Int): Boolean
     override fun evaluate(index: Int): Boolean {
         return doEvaluate(index).also { _outputs[index] = it }
     }
@@ -41,7 +42,6 @@ abstract class MTUnaryGate(private val inputId: Int, threadSize: Int): MTGate, M
     override fun bindInputs(gatesMap: Map<Int, MTGate>) {
         input = gatesMap[inputId] ?: error(inputId)
     }
-
 
     override val level get() = input.level + 1
 
@@ -122,13 +122,14 @@ class MTNorGate(inputIds: List<Int>, threadSize: Int): MTMultiGate(inputIds, thr
 class MTInputGate(threadSize: Int):MTLogicGate(threadSize), InputGateI {
 
     override val outputs: Array<Boolean>
-        get() = input
+        get() = inputs
 
-    var input = Array(threadSize) { false }
+    var inputs = Array(threadSize) { false }
+    override var input: Boolean = inputs[0]
     override val level: Int get() = 0
 
     override fun doEvaluate(index: Int): Boolean {
-        return input[index]
+        return inputs[index]
     }
 
     override fun bindInputs(gatesMap: Map<Int, MTGate>) { }

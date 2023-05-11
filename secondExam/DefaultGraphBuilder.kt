@@ -3,9 +3,13 @@ package secondExam
 import Lexer
 import expect
 import probe
+import probeDigits
 import probeEOF
 import readAlphabet
+import readDigits
 import readTill
+import skipSpCrLfTab
+import skipSpace
 import java.io.FileInputStream
 import java.io.InputStream
 
@@ -14,118 +18,84 @@ import java.io.InputStream
 //  +- MTGraphParser
 
 abstract class GraphParser<T : Gate> {
-    companion object {
-        val default = DefaultGraphParser()
+
+
+    private fun Lexer.expectComment() {
+        this.expect("#")
+        this.readTill("\r\n")
     }
 
-    protected fun expectComment(lexer: Lexer) {
-        lexer.expect("#")
-        lexer.readTill("\r\n")
-    }
-
-    protected fun expectInput(lexer: Lexer): Int {
-        lexer.expect("INPUT")
-        lexer.skipSpace()
-        lexer.expect("(")
-        lexer.skipSpace()
-        val id = lexer.readDigits()
-        lexer.skipSpace()
-        lexer.expect(")")
+    private fun Lexer.expectIO(ioName: String): Int {
+        this.expect(ioName)
+        this.skipSpace()
+        this.expect("(")
+        this.skipSpace()
+        val id = this.readDigits()
+        this.skipSpace()
+        this.expect(")")
 
         return id
     }
 
-    protected fun expectOutput(lexer: Lexer): Int {
-        lexer.expect("OUTPUT")
-        lexer.skipSpace()
-        lexer.expect("(")
-        lexer.skipSpace()
-        val id = lexer.readDigits()
-        lexer.skipSpace()
-        lexer.expect(")")
-
-        return id
-    }
-
-    protected fun <T> expectGate(
-        lexer: Lexer,
-//        type: String,
+    private fun <T> Lexer.expectGate(
         build: (List<Int>) -> T
     ): T {
-//        lexer.expect(type)
-        lexer.skipSpace()
-        lexer.expect("(")
-        lexer.skipSpace()
+        this.skipSpace()
+        this.expect("(")
+        this.skipSpace()
         val inputIds = mutableListOf<Int>()
-        while (!lexer.probe(")")) {
-            inputIds.add(lexer.readDigits())
-            lexer.skipSpace()
-            if (lexer.probe(",")) {
-                lexer.expect(",")
+        while (!this.probe(")")) {
+            inputIds.add(this.readDigits())
+            this.skipSpace()
+            if (this.probe(",")) {
+                this.expect(",")
             }
-            lexer.skipSpace()
+            this.skipSpace()
         }
-        lexer.expect(")")
+        this.expect(")")
         return build(inputIds)
     }
 
-//    abstract val gateFactories: Map<String, GateFactory<*>>
-
     abstract fun createGate(type: String, inputIds: List<Int>): T
 
-    protected fun expectGate(lexer: Lexer): Pair<Int, T> {
-        val id = lexer.readDigits()
-        lexer.skipSpace()
-        lexer.expect("=")
-        lexer.skipSpace()
+    private fun Lexer.expectGateWithId(): Pair<Int, T> {
+        val id = this.readDigits()
+        this.skipSpace()
+        this.expect("=")
+        this.skipSpace()
 
-        val type = lexer.readAlphabet()
-        val gate = expectGate(lexer) {
+        val type = this.readAlphabet()
+        val gate = this.expectGate {
             createGate(type, it)
         }
 
         return Pair(id, gate)
-
-//        val gate =
-//            gateFactories.keys
-//                .firstOrNull {
-//                    lexer.probe(it)
-//                }
-//                ?.let { key ->
-//                    expectGate(lexer, key) { inputIds ->
-//                        gateFactories[key]?.create(inputIds)
-//                            ?: error("Factory of gate [$key] does not exist")
-//                    }
-//                }
-//                ?: error("Invalid input format")
-//        return Pair(id, gate)
     }
-
-
-
 
     fun parse(lexer: Lexer): ParsingResult<T> {
         val inputIds = mutableListOf<Int>()
         val outputIds = mutableListOf<Int>()
         val gates = mutableMapOf<Int, T>()
+        val inputString = "INPUT"
+        val outputString = "OUTPUT"
 
         lexer.skipSpCrLfTab()
+
         while (!lexer.probeEOF()) {
-//            println("Peek: ${lexer.peek()?.let { Char(it) }}")
 
             if (lexer.probe("#")) {
-                expectComment(lexer)
+                lexer.expectComment()
             }
-            else if (lexer.probe("INPUT")) {
-                val id = expectInput(lexer)
+            else if (lexer.probe(inputString)) {
+                val id = lexer.expectIO(inputString)
                 inputIds.add(id)
             }
-            else if (lexer.probe("OUTPUT")) {
-                val id = expectOutput(lexer)
+            else if (lexer.probe(outputString)) {
+                val id = lexer.expectIO(outputString)
                 outputIds.add(id)
             }
             else if (lexer.probeDigits()) {
-                val (id, gate) = expectGate(lexer)
+                val (id, gate) = lexer.expectGateWithId()
                 gates[id] = gate
             }
             else {
@@ -140,30 +110,19 @@ abstract class GraphParser<T : Gate> {
     data class ParsingResult<T: Gate>(
         val inputIds: List<Int>,
         val outputIds: List<Int>,
-        val gates: Map<Int, T>
+        val gates: Map<Int,T>
     )
 }
 
 
-class DefaultGraphParser : GraphParser<Gate>() {
+class DefaultGraphParser private constructor(): GraphParser<Gate>() {
+    companion object {
+        val default = DefaultGraphParser()
+    }
+
     override fun createGate(type: String, inputIds: List<Int>): Gate {
-        return gateFactories[type]?.create(inputIds)!!
+        return stGateFactories[type]?.create(inputIds)!!
     }
-
-//    override val gateFactories: Map<String, GateFactory<*>>
-    private val gateFactories: Map<String, GateFactory<*>>
-        get() = stGateFactories
-}
-
-class MTGraphParser(private val threadSize: Int): GraphParser<MTGate>() {
-    override fun createGate(type: String, inputIds: List<Int>): MTGate {
-        return gateFactories[type]?.create(inputIds, threadSize)!!
-    }
-
-//    override val gateFactories: Map<String, MTGateFactory<*>>
-    private val gateFactories: Map<String, MTGateFactory<*>>
-        get() = MTGateFactories
-
 }
 
 // Design pattern
@@ -177,41 +136,30 @@ interface GraphBuilderI {
     fun fromStream(istream: InputStream): GraphI
 }
 
-//class LeveledGraphBuilder: GraphBuilderI {
-//    override fun fromStream(istream: InputStream, threadSize: Int): Graph {
-//        TODO("Not yet implemented")
-//    }
-//}
-
 abstract class GraphBuilder<T: Gate, U: InputGateI>: GraphBuilderI {
     override fun fromFile(filename: String): GraphI {
         return fromStream(FileInputStream(filename))
     }
 
-    abstract fun parsingFile(lexer: Lexer): GraphParser.ParsingResult<T>
-    abstract fun createInputsMap(inputIds: List<Int>) : Map<Int, U>
-    abstract fun bindInput(inputsMap: Map<Int, U>, gates: Map<Int, T>)
+    protected abstract fun parsingFile(lexer: Lexer): GraphParser.ParsingResult<T>
+    protected abstract fun createInputsMap(inputIds: List<Int>) : Map<Int,U>
+    protected abstract fun bindInput(inputsMap: Map<Int, U>, gates: Map<Int, T>)
+    protected abstract fun createGraph(
+        inputsMap: Map<Int, U>,
+        outputIds: List<Int>,
+        gates: Map<Int, T>,
+        levels: Array<List<T>>): GraphI
 
     override fun fromStream(istream: InputStream): GraphI {
         val (inputIds, outputIds, gates) =
             parsingFile(Lexer(istream))
 
-
-
         val inputsMap = createInputsMap(inputIds)
-
-        val allGatesMap = gates + inputsMap
-
-
-
-
-        val allGates = allGatesMap.values.toList()
 
         // 2nd pass
         bindInput(inputsMap, gates)
-//        for (gate in gates) {
-//            gate.value.bindInputs(allGatesMap)
-//        }
+
+
 
         // 3rd pass
         val maxLevel = outputIds
@@ -226,17 +174,9 @@ abstract class GraphBuilder<T: Gate, U: InputGateI>: GraphBuilderI {
             }
         }
 
-//        val inputsMap = inputIds.associateWith { allGatesMap[it]!! as InputGate }
-//        val outputsMap = outputIds.associateWith { allGatesMap[it]!!}
-
-
         return createGraph(inputsMap, outputIds, gates, levels)
     }
-    abstract fun createGraph(
-        inputsMap: Map<Int, U>,
-        outputIds: List<Int>,
-        gates: Map<Int, T>,
-        levels: Array<List<T>>): GraphI
+
 }
 
 
@@ -244,12 +184,10 @@ abstract class GraphBuilder<T: Gate, U: InputGateI>: GraphBuilderI {
 class DefaultGraphBuilder private constructor(): GraphBuilder<Gate,InputGate>() {
     companion object {
         val default: GraphBuilderI = DefaultGraphBuilder()
-//        val default: GraphBuilderI = LeveledGraphBuilder()
-
     }
 
     override fun parsingFile(lexer: Lexer): GraphParser.ParsingResult<Gate> {
-        return GraphParser.default.parse(lexer)
+        return DefaultGraphParser.default.parse(lexer)
     }
 
     override fun createInputsMap(inputIds: List<Int>): Map<Int, InputGate> {
@@ -271,8 +209,4 @@ class DefaultGraphBuilder private constructor(): GraphBuilder<Gate,InputGate>() 
             (gate.value as LogicGate).bindInputs(allGatesMap)
         }
     }
-
-
 }
-
-

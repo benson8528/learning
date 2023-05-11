@@ -6,7 +6,6 @@ const val EOF = -1
 
 private const val DEFULT_PROBE_LIMIT = 1024
 open class Lexer(private val input: InputStream): InputStream() {
-    private var putback : IntLinkedListT = IntLinkedListT()
 
     private data class Node(
         val data: Int,
@@ -54,37 +53,7 @@ open class Lexer(private val input: InputStream): InputStream() {
                 node = node.next
             }
         }
-
     }
-
-//    fun probe(vararg data: Int): Boolean {
-//        if (data.isEmpty()) { return false }
-//
-//        var read: Int = read()
-//
-//        var i = 0
-//        while (i < data.size) {
-//            if (read != data[i]) { break }
-//
-//            read = read()
-//            i += 1
-//        }
-//
-//        val success = i == data.size
-//
-//        // Put back last non-matched read
-////        if (!success) {
-//            _putbackHead = Node(read, _putbackHead)
-////        }
-//
-//        // Put back matched reads
-//        i--
-//        while (i >= 0) {
-//            _putbackHead = Node(data[i--], _putbackHead)
-//        }
-//
-//        return success
-//    }
 
     fun peek() : Int? {
         val read = read()
@@ -114,40 +83,6 @@ open class Lexer(private val input: InputStream): InputStream() {
         }
     }
 
-    fun skipSpace() {
-        skip(' '.code)
-    }
-
-    fun skipSpCrLfTab() {
-        skip(' '.code, '\r'.code, '\n'.code, '\t'.code)
-
-//        while (true) {
-//            val next = peek()?.let { Char(it) }
-////            println("NEXT: '${next?.code}'; PUTBACK: '${putbackString()}'")
-//
-//            if (next == ' '||next == '\r'|| next == '\n'|| next == '\t') {
-//                read()
-//            }
-//            else {
-//                break
-//            }
-//        }
-    }
-
-    fun readDigits(): Int {
-        val sb = StringBuilder()
-        while (probeDigits()) {
-            sb.append(Char(read()))
-        }
-        return sb.toString().toInt()
-    }
-
-    fun probeDigits(): Boolean {
-        val nextIsDigit = peek()?.let { Char(it).isDigit()}
-
-        return nextIsDigit == true
-    }
-
     override fun read(): Int {
         val data = _putbackHead?.data ?: input.read()
         _putbackHead = _putbackHead?.next
@@ -159,8 +94,34 @@ const val SPACE = ' '
 //const val CR = '\r'
 //const val LF = '\n'
 
+fun Lexer.readDigits(): Int {
+    val sb = StringBuilder()
+    while (probeDigits()) {
+        sb.append(Char(read()))
+    }
+    return sb.toString().toInt()
+}
+
+fun Lexer.probeDigits(): Boolean {
+    val nextIsDigit = peek()?.let { Char(it).isDigit() }
+
+    return nextIsDigit == true
+}
+
 fun Lexer.readTill(string: String): String {
     return readTill(*string.toIntArray())
+}
+
+fun Lexer.skip(vararg options: Char) {
+    options.map { it.code }.toIntArray().let { skip(*it) }
+}
+
+fun Lexer.skipSpace() {
+    skip(' ')
+}
+
+fun Lexer.skipSpCrLfTab() {
+    skip(' ', '\r', '\n', '\t')
 }
 
 fun Lexer.expect(string: String) {
@@ -229,7 +190,6 @@ fun IntList.startsWith(array: IntArray): Boolean {
     return true
 }
 
-fun IntList.sublist(from: Int, to: Int): IntList = TODO()
 fun IntList.contentEquals(array: IntArray): Boolean {
     if (size != array.size) { return false }
     val iter = iterator()

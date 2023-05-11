@@ -1,41 +1,32 @@
 package secondExam
 
 import Lexer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import java.util.*
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import kotlin.concurrent.thread
 
 private const val FILE_NAME = "C:\\Users\\A273\\Desktop\\c432.txt"
+private const val LIMIT_SIZE = 8_000_000
 
-class MTGraphBuilder(private val threadSize: Int): GraphBuilder<MTGate, MTInputGate>() {
-    override fun parsingFile(lexer: Lexer): GraphParser.ParsingResult<MTGate> {
-        return MTGraphParser(threadSize).parse(lexer)
-    }
+//private const val FILE_NAME = "C:\\Users\\A273\\Desktop\\c7552.txt"
+//private const val LIMIT_SIZE = 1_000_000
 
-    override fun createInputsMap(inputIds: List<Int>): Map<Int, MTInputGate> {
-        return inputIds.associateWith { MTInputGate(threadSize) }
-    }
+private const val MAX_CPU_SIZE = 16
+private const val MIN_CPU_SIZE = 1
 
-    override fun createGraph(
-        inputsMap: Map<Int, MTInputGate>,
-        outputIds: List<Int>,
-        gates: Map<Int, MTGate>,
-        levels: Array<List<MTGate>>
-    ): GraphI {
-        return MTGraph(inputsMap, outputIds, gates, levels, threadSize)
-    }
+private const val INIT_DELAY = 3_000L
 
-    override fun bindInput(inputsMap: Map<Int, MTInputGate>, gates: Map<Int, MTGate>) {
-        val allGatesMap = inputsMap + gates
-        for (gate in gates) {
-            (gate.value as MTLogicGate).bindInputs(allGatesMap)
-        }
-    }
-}
-
-class MTGraph(
+open class MTGraph(
     private val inputsMap: Map<Int, MTInputGate>,
     outputIds: List<Int>,
     private val gates: Map<Int, MTGate>,
     private val levels: Array<List<MTGate>>,
-    private val threadSize: Int
+    protected val threadSize: Int
 ): GraphI {
 
     val inputsGate: List<MTInputGate> by lazy {
@@ -50,107 +41,139 @@ class MTGraph(
     }
 
 
-//    val inputValues: Array<Array<Boolean>>
-//        get() {
-//            return Array(inputsGate.size) {
-//                inputsGate[it].input
-//            }
-//        }
-
-//    private val perm = InputPermutation(inputsMap.size)
-    private val perm = InputPermutation(13)
-    private val threads = Array<GateEvaluateThread>(threadSize) {
-        GateEvaluateThread(it)
-    }
-    private var count = 1
-    private var timestamp = 0L
-    private fun getInputCount() {
-        if (count % 1_000_000 == 0) {
-            val old = timestamp
-            timestamp = System.currentTimeMillis()
-            println("${(timestamp - old) / 1000} seconds")
-        }
-        count++
-    }
-
     override fun evaluateAll() {
-        timestamp = System.currentTimeMillis()
-        startTime = System.currentTimeMillis()
-        for (thread in threads) {
-            thread.start()
-        }
-        for (thread in threads) {
-            thread.join()
-        }
-//        println("${(System.currentTimeMillis() - startTime) / 1_000} second")
-    }
-    private var startTime = 0L
-    private var completeThread = 0
-    fun getInputComplete() {
-        completeThread++
-        if (completeThread == threadSize) {
-            println("${(System.currentTimeMillis() - startTime) / 1_000} second")
-        }
-    }
-
-    inner class GateEvaluateThread(val index: Int): Thread() {
-        private val lock = Object()
-        private var completed = false
-        var inputCount = 0
-
-        override fun run() {
-
-            while (true) {
-                val gateInputs =
-//                val gateInputs = synchronized(perm) {
-                    when {
-                        perm.hasNext() -> {
-//                            getInputCount()
-                            perm.next()
-                            inputCount++
-                        }
-                        else -> null
-                    }
-                        ?:break
-//                } ?: break
-                sleep(5)
-//                setInput(index ,gateInputs)
-//                evaluate(index)
-            }
-//            println("thread: $index get $inputCount inputs")
+        val perm = LimitedInputPermutation(inputsMap.size, LIMIT_SIZE)
+        val queues = Array(threadSize) {
+            LinkedList<Array<Boolean>>()
         }
 
-
-
-        fun evaluate(threadIndex: Int) {
-//            println(threadIndex)
-            for (level in levels) {
-                for (gate in level) {
-                    gate.evaluate(threadIndex)
+        val perms =
+            queues.map { queue ->
+                object : Permutation {
+                    override fun hasNext(): Boolean = queue.isNotEmpty()
+                    override fun next(): Array<Boolean> = queue.removeFirst()
                 }
             }
-//            println(outputValue(threadIndex))
-        }
 
-        fun setInput(threadIndex: Int,inputs: Array<Boolean>) {
-            inputsGate.forEachIndexed { i, mtInputGate ->
-                mtInputGate.input[threadIndex] = inputs[i]
+
+        thread { // Dispatch thread
+            var index = 0
+            while (perm.hasNext()) {
+                queues[index++].addLast(perm.next())
+                index %= threadSize
             }
         }
+
+        Thread.sleep(INIT_DELAY)
+
+
+        doEvaluate(perms)
+
+    }
+
+    protected open fun doEvaluate(perms: List<Permutation>) {
+        (0 until threadSize)
+            .map {index ->
+                thread{ GateEvaluationTask(perms[index], index).run() }
+            }
+            .forEach { thread ->
+                thread.join()
+            }
+    }
+
+
+    fun evaluate(index: Int) {
+        for (level in levels) {
+            for (gate in level) {
+                gate.evaluate(index)
+            }
+        }
+    }
+
+    fun setInput(index: Int, inputs: Array<Boolean>) {
+        inputsGate.forEachIndexed { i, mtInputGate ->
+            mtInputGate.inputs[index] = inputs[i]
+        }
+    }
+
+    inner class GateEvaluationTask(
+        val perm: Permutation,
+        val index: Int
+    ): Runnable {
+        private var inputCount = 0
+
+        suspend fun execute() {
+            val start = System.currentTimeMillis()
+            while (true) {
+                val gateInputs = perm.nextOrNull() ?: break
+                inputCount++
+                setInput(index, gateInputs)
+                evaluate(index)
+            }
+            val end = System.currentTimeMillis()
+            println("${index}th thread takes $inputCount inputs, runs ${end - start} ms")
+        }
+
+        override fun run() = runBlocking {
+            execute()
+        }
+    }
+}
+
+class CoroutineMTGraph(
+    inputsMap: Map<Int, MTInputGate>,
+    outputIds: List<Int>,
+    gates: Map<Int, MTGate>,
+    levels: Array<List<MTGate>>,
+    threadSize: Int
+): MTGraph(inputsMap, outputIds, gates, levels, threadSize) {
+    private suspend fun execute(perms: List<Permutation>) = coroutineScope {
+        repeat(threadSize) { index ->
+            launch(Dispatchers.IO) {
+                println("#$index coroutine run on thread: ${Thread.currentThread().name}")
+                GateEvaluationTask(perms[index], index).execute()
+            }
+        }
+    }
+
+    override fun doEvaluate(perms: List<Permutation>) {
+        runBlocking {
+            execute(perms)
+        }
+    }
+}
+
+class ThreadPoolMTGraph(
+    inputsMap: Map<Int, MTInputGate>,
+    outputIds: List<Int>,
+    gates: Map<Int, MTGate>,
+    levels: Array<List<MTGate>>,
+    threadSize: Int
+): MTGraph(inputsMap, outputIds, gates, levels, threadSize) {
+    override fun doEvaluate(perms: List<Permutation>) {
+        val threadPool = Executors.newFixedThreadPool(threadSize)
+        (0 until threadSize)
+            .map { index ->
+                threadPool.submit(GateEvaluationTask(perms[index], index))
+            }
+            .forEach {
+                it.get()
+            }
+        threadPool.shutdown()
     }
 }
 
 fun main() {
-//    val mtGraph = MTGraphBuilder(20).fromFile(FILE_NAME)
-//    val stGraph = DefaultGraphBuilder.default.fromFile(FILE_NAME)
-//    mtGraph.evaluateAll()
-
-    for (i in 20 downTo 2) {
-        val mtGraph = MTGraphBuilder(i).fromFile(FILE_NAME)
-        val time = measureTime {
-            mtGraph.evaluateAll()
+    repeat(1) {
+        for (i in MIN_CPU_SIZE .. MAX_CPU_SIZE) {
+            println("------------")
+//            val mtGraph = MTGraphBuilder(i).fromFile(FILE_NAME)
+//            val mtGraph = CoroutineMTGraphBuilder(i).fromFile(FILE_NAME)
+            val mtGraph = ThreadPoolMTGraphBuilder(i).fromFile(FILE_NAME)
+            val time = measureTime {
+                mtGraph.evaluateAll()
+            }
+            println("$i thread: ${time} ms")
         }
-        println("$i thread: ${time} ms")
     }
 }
-

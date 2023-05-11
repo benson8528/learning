@@ -91,11 +91,6 @@ class ChunkInputStream(
     private fun expectCrLf(): Unit {
         require(Char(input.read()) == CR)
         require(Char(input.read()) == LF)
-
-        //TODO: BUGGY WHEN `input.read()` doesn't give exactly 2 bytes.
-//        val crlf = ByteArray(2)
-//        val read = input.read(crlf)
-//        require(read == 2 && String(crlf) == "\r\n")
     }
 
     private fun readChunk() {

@@ -1,12 +1,38 @@
 package secondExam
 
+import kotlin.concurrent.thread
+import kotlin.math.pow
+
 interface Permutation {
     fun hasNext(): Boolean
     fun next(): Array<Boolean>
 }
 
 
-class InputPermutation(val size: Int): Permutation {
+fun Permutation.nextOrNull(): Array<Boolean>? =
+    if (hasNext()) {
+        next()
+    }
+    else {
+        null
+    }
+
+//      lock version
+//fun Permutation.nextOrNull(): Array<Boolean>? = synchronized(this) {
+//        if (hasNext()) {
+//            return@synchronized next()
+//        }
+//        else {
+//            return@synchronized null
+//        }
+//    }
+
+interface FastPermutation {
+    fun next(): Array<Boolean>?
+}
+
+
+open class InputPermutation(val size: Int): Permutation {
 
     private var nextValue: Array<Boolean>?
 
@@ -14,8 +40,11 @@ class InputPermutation(val size: Int): Permutation {
         nextValue = Array(size) { false }
     }
 
+    //<editor-fold desc="Obsolete properties and methods">
+    @Deprecated("Obsolete property")
     private inline val Array<Boolean>.isFinal get() = all { it }
 
+    @Deprecated("Obsolete method")
     private fun Array<Boolean>.advance(index: Int = 0) {
 //        if (this[index] && index != this.lastIndex) {
 //            advance(index + 1)
@@ -30,6 +59,7 @@ class InputPermutation(val size: Int): Permutation {
 
 
     }
+    //</editor-fold>
 
     override fun hasNext(): Boolean {
         return nextValue != null
@@ -43,41 +73,64 @@ class InputPermutation(val size: Int): Permutation {
             if (nextValue[i]) { return }
             i++
         }
-//        if (i == nextValue.size) {
-            this.nextValue = null
-//        }
+
+        this.nextValue = null
     }
     override fun next(): Array<Boolean> {
-//        val nextValue = this.nextValue?.copy()
         val nextValue = this.nextValue
         require(nextValue != null)
         this.advance()
-//        if (this.nextValue?.isFinal != false) {
-//            this.nextValue = null
-//        }
-//        else {
-//            this.nextValue?.advance()
-//        }
         return nextValue
     }
 }
 
-fun Array<Boolean>.copy(): Array<Boolean> {
-    return copyOfRange(0, size)
-//    return Array(size) { index ->
-//        this[index]
-//    }
+class LimitedInputPermutation(
+    size: Int,
+    private val limit: Int
+): InputPermutation(size) {
+    private var counter = 0
+
+    override fun hasNext(): Boolean {
+        return counter < limit && super.hasNext()
+    }
+
+    override fun next(): Array<Boolean> {
+        return super.next().also { counter++ }
+    }
 }
 
+//class ThreadSafeInputPermutation(size: Int): InputPermutation(size) {
+//    override fun hasNext(): Boolean {
+//        synchronized(this) {
+//            return super.hasNext()
+//        }
+//    }
+//
+//    override fun next(): Array<Boolean> {
+//        synchronized(this) {
+//            return super.next()
+//        }
+//    }
+//}
 
-fun main() {
-    repeat(10) {
-        val perm = InputPermutation(31)
+fun Array<Boolean>.copy(): Array<Boolean> {
+    return copyOfRange(0, size)
+}
 
-        measure {
-            while (perm.hasNext()) {
-                perm.next()
-            }
+class TestThread: Thread() {
+    companion object {
+        val perm = InputPermutation(28)
+    }
+    override fun run() {
+        while (perm.hasNext()) {
+            perm.next()
+
         }
+//        measure {
+//            while (perm.hasNext()) {
+//                perm.next()
+//
+//            }
+//        }
     }
 }

@@ -9,6 +9,7 @@ interface Gate {
 
     fun evaluate(): Boolean
 
+//    fun <T: Gate> bindInputs(gatesMap: Map<Int, T>)
 }
 
 
@@ -28,10 +29,6 @@ abstract class LogicGate: Gate {
 
     override val output: Boolean get() = _output
 
-//    fun resetOutput() {
-//        _output = null
-//    }
-
     abstract fun bindInputs(gatesMap: Map<Int, Gate>)
 
     protected fun error(gateId: Int): Nothing {
@@ -44,17 +41,7 @@ abstract class LogicGate: Gate {
         return doEvaluate().also {
             _output = it
         }
-//        return _output ?: doEvaluate().also { _output = it }
     }
-
-//    protected inline fun ev(cond: () -> Boolean):Boolean {
-//        if (_output != null ){
-//            return _output!!
-//        }
-//        val result = cond()
-//        _output = result
-//        return result
-//    }
 }
 
 abstract class UnaryGate(private val inputId: Int): Gate, LogicGate() {
@@ -74,7 +61,6 @@ abstract class BinaryGate(
     private val inputId1: Int,
     private val inputId2: Int
 ): Gate, LogicGate() {
-//    constructor(private val inputIds: List<Int>)
 
     protected lateinit var input1: Gate
     protected lateinit var input2: Gate
@@ -114,9 +100,11 @@ class BuffGate(inputId: Int): UnaryGate(inputId) {
 
 }
 
-interface InputGateI: Gate
+interface InputGateI: Gate {
+    var input: Boolean
+}
 
-class InputGate(var input: Boolean = false): LogicGate(), InputGateI {
+class InputGate(override var input: Boolean = false): LogicGate(), InputGateI {
 
     override val output: Boolean get() = input
 

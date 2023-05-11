@@ -196,7 +196,7 @@ class MTBuffGateFactory private constructor(): MTGateFactory<MTBuffGate> {
     }
 }
 
-val MTGateFactories: Map<String, MTGateFactory<*>> = mapOf(
+val mtGateFactories: Map<String, MTGateFactory<*>> = mapOf(
     "AND" to MTAndGateFactory.default,
     "NAND" to MTNandGateFactory.default,
     "OR" to MTOrGateFactory.default,

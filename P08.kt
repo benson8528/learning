@@ -1,5 +1,4 @@
 import kotlinx.coroutines.*
-import kotlin.coroutines.coroutineContext
 
 
 fun doTaskA(id: Int) {
@@ -15,29 +14,35 @@ fun doTaskC(id: Int) {
 fun main() {
 
     runBlocking {
-        Dispatchers.IO
-        Dispatchers.Main
-
-        coroutineScope {
-            repeat(10) {
-                launch {
-                    println("[${Thread.currentThread().name}] coroutine #$it")
-                    delay(1000)
-                    println("[${Thread.currentThread().name}] #$it completed")
-                }
-            }
-            repeat(5) {
-                launch(Dispatchers.IO) {
-                    println("[${Thread.currentThread().name}] Fetching data from service #$it")
-                    launch(Dispatchers.Main) {
-                        // If new data available, then update UI
-                    }
-                    delay(1000)
-
-                    println("[${Thread.currentThread().name}] IO#$it completed")
-                }
+//        Dispatchers.IO
+//        Dispatchers.Main
+        repeat(2) {
+            launch {
+                println("#$it start")
+                delay(1000)
+                println("#$it end")
             }
         }
+//        coroutineScope {
+//            repeat(10) {
+//                launch {
+//                    println("[${Thread.currentThread().name}] coroutine #$it")
+//                    delay(1000)
+//                    println("[${Thread.currentThread().name}] #$it completed")
+//                }
+//            }
+//            repeat(5) {
+//                launch(Dispatchers.IO) {
+//                    println("[${Thread.currentThread().name}] Fetching data from service #$it")
+//                    launch(Dispatchers.Main) {
+//                        // If new data available, then update UI
+//                    }
+//                    delay(1000)
+//
+//                    println("[${Thread.currentThread().name}] IO#$it completed")
+//                }
+//            }
+//        }
 //        coroutineScope {
 //
 //        }
