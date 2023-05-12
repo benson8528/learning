@@ -72,7 +72,7 @@ abstract class AbstractGraphBuilder<
             }
 
         val levels = Array(maxLevel + 1) { index ->
-            gatesMap.values.filter { gate ->
+            allGatesMap.values.filter { gate ->
                 gate.level == index
             }
         }

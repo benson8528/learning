@@ -1,9 +1,7 @@
 package secondExam
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
+import java.lang.Runnable
 import java.util.*
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
@@ -34,8 +32,26 @@ open class MTGraph(
         return outputsMap.values.map { it.outputs[threadIndex] }
     }
 
+    fun setInput(index: Int, inputs: Array<Boolean>) {
+        inputGates.forEachIndexed { i, gate ->
+            gate.inputs[index] = inputs[i]
+        }
+    }
+
+    private fun printGraphInformation() {
+        println("--- MTGraph with $threadSize threads")
+        for (level in levels.indices) {
+            println("# of gates in level $level: ${levels[level].size}")
+        }
+        println("--- ")
+    }
+
     override fun evaluateAll() {
+        printGraphInformation()
+
         val perm = LimitedInputPermutation(inputsMap.size, LIMIT_SIZE)
+        println("Evaluating $LIMIT_SIZE samples")
+
         val queues = Array(threadSize) {
             LinkedList<Array<Boolean>>()
         }
@@ -49,14 +65,18 @@ open class MTGraph(
             }
 
         thread { // Dispatch thread
+            println("Dispatching input values ...")
             var index = 0
             while (perm.hasNext()) {
                 queues[index++].addLast(perm.next())
                 index %= threadSize
             }
+            println("Dispatching complete.")
         }
 
+        println("Waiting for initial dispatching ...")
         Thread.sleep(INIT_DELAY)
+        println("Start evaluating ...")
 
         doEvaluate(perms)
 
@@ -64,50 +84,63 @@ open class MTGraph(
 
     protected open fun doEvaluate(perms: List<Permutation>) {
         (0 until threadSize)
-            .map {index ->
-                thread{ GateEvaluationTask(perms[index], index).run() }
+            .map { index ->
+                thread {
+                    evaluate(index, perms[index])
+//                    GateEvaluationTask(perms[index], index).run()
+                }
             }
             .forEach { thread ->
                 thread.join()
             }
     }
 
+    protected fun evaluate(index: Int, perm: Permutation) {
+        var count = 0
+        val start = System.currentTimeMillis()
+        while (true) {
+            val inputs = perm.nextOrNull() ?: break
+            count++
+            setInput(index, inputs)
+            evaluate(index)
+        }
+        val end = System.currentTimeMillis()
+        println("${index}th thread takes $count inputs, runs ${end - start} ms")
+    }
+
     fun evaluate(index: Int) {
-        for (level in levels) {
+//        for (level in levels) {
+        for (i in 1 until levels.size) {
+            val level = levels[i]
             for (gate in level) {
                 gate.evaluate(index)
             }
         }
     }
 
-    fun setInput(index: Int, inputs: Array<Boolean>) {
-        inputGates.forEachIndexed { i, mtInputGate ->
-            mtInputGate.inputs[index] = inputs[i]
-        }
-    }
-
-    inner class GateEvaluationTask(
-        val perm: Permutation,
-        val index: Int
-    ): Runnable {
-        private var inputCount = 0
-
-        suspend fun execute() {
-            val start = System.currentTimeMillis()
-            while (true) {
-                val gateInputs = perm.nextOrNull() ?: break
-                inputCount++
-                setInput(index, gateInputs)
-                evaluate(index)
-            }
-            val end = System.currentTimeMillis()
-            println("${index}th thread takes $inputCount inputs, runs ${end - start} ms")
-        }
-
-        override fun run() = runBlocking {
-            execute()
-        }
-    }
+    // Content moved to `evaluate(Int, Permutation)`
+//    inner class GateEvaluationTask(
+//        val perm: Permutation,
+//        val index: Int
+//    ) : Runnable {
+//        private var inputCount = 0
+//
+//        suspend fun execute() {
+//            val start = System.currentTimeMillis()
+//            while (true) {
+//                val inputs = perm.nextOrNull() ?: break
+//                inputCount++
+//                setInput(index, inputs)
+//                evaluate(index)
+//            }
+//            val end = System.currentTimeMillis()
+//            println("${index}th thread takes $inputCount inputs, runs ${end - start} ms")
+//        }
+//
+//        override fun run() = runBlocking {
+//            execute()
+//        }
+//    }
 }
 
 class CoroutineMTGraph(
@@ -116,19 +149,27 @@ class CoroutineMTGraph(
     levels: Array<out List<MTGate>>,
     threadSize: Int
 ): MTGraph(inputsMap, outputsMap, levels, threadSize) {
-    private suspend fun execute(perms: List<Permutation>) = coroutineScope {
-        repeat(threadSize) { index ->
-            launch(Dispatchers.IO) {
-                println("#$index coroutine run on thread: ${Thread.currentThread().name}")
-                GateEvaluationTask(perms[index], index).execute()
-            }
-        }
-    }
+//    private suspend fun execute(perms: List<Permutation>) = coroutineScope {
+//        repeat(threadSize) { index ->
+//            launch(Dispatchers.IO) {
+//                println("#$index coroutine run on thread: ${Thread.currentThread().name}")
+//                GateEvaluationTask(perms[index], index).execute()
+//            }
+//        }
+//    }
 
     override fun doEvaluate(perms: List<Permutation>) {
-        runBlocking {
-            execute(perms)
+        repeat(threadSize) { index ->
+            CoroutineScope(Dispatchers.IO)
+                .launch {
+                    println("#$index coroutine run on thread: ${Thread.currentThread().name}")
+                    evaluate(index, perms[index])
+                }
         }
+
+//        runBlocking {
+//            execute(perms)
+//        }
     }
 }
 
@@ -139,15 +180,16 @@ class ThreadPoolMTGraph(
     threadSize: Int
 ): MTGraph(inputsMap, outputsMap, levels, threadSize) {
     override fun doEvaluate(perms: List<Permutation>) {
-        val threadPool = Executors.newFixedThreadPool(threadSize)
+        val pool = Executors.newFixedThreadPool(threadSize)
         (0 until threadSize)
             .map { index ->
-                threadPool.submit(GateEvaluationTask(perms[index], index))
+//                pool.submit(GateEvaluationTask(perms[index], index))
+                pool.submit(kotlinx.coroutines.Runnable { evaluate(index, perms[index]) })
             }
             .forEach {
                 it.get()
             }
-        threadPool.shutdown()
+        pool.shutdown()
     }
 }
 
@@ -161,7 +203,7 @@ fun main() {
             val time = measureTime {
                 mtGraph.evaluateAll()
             }
-            println("$i thread: ${time} ms")
+            println("$i thread: $time ms")
         }
     }
 }
