@@ -1,7 +1,5 @@
 package secondExam
 
-import Lexer
-
 open class MTGraphBuilder protected constructor(
     protected val threadSize: Int
 ): AbstractGraphBuilder<MTGraph, MTLogicGate, MTInputGate>() {

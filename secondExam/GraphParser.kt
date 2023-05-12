@@ -1,16 +1,5 @@
 package secondExam
 
-import Lexer
-import expect
-import probe
-import probeDigits
-import probeEOF
-import readAlphabet
-import readDigits
-import readTill
-import skipSpCrLfTab
-import skipSpace
-
 abstract class GraphParser<T : Gate> {
     companion object {
         private const val INPUT_NAME = "INPUT"
@@ -67,7 +56,7 @@ abstract class GraphParser<T : Gate> {
         this.expect("=")
         this.skipSpace()
 
-        val type = this.readAlphabet()
+        val type = this.readAlphabets()
         val gate = createGate(type, expectInputIds())
 
         return Pair(id, gate)

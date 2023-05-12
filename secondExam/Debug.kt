@@ -1,11 +1,6 @@
 package secondExam
 
-import Lexer
-import probe
-import probeEOF
-import readTill
 import java.io.ByteArrayInputStream
-import java.io.StringReader
 
 private const val CONTENT = "# c17     \r\n# 5"
 
