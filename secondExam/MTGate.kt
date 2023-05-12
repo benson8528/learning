@@ -42,14 +42,15 @@ class MTInputGate(threadSize: Int): MTLogicGate(threadSize), InputGateI {
         return inputs[index]
     }
 
-    override fun bindInputs(gatesMap: Map<Int, MTGate>) { }
+    override fun bindGates(gatesMap: Map<Int, MTGate>) { }
 }
 
 abstract class MTLogicGate(threadSize: Int): MTGate {
     private val _outputs: Array<Boolean> = Array(threadSize) { false }
     override val outputs: Array<Boolean> get() = _outputs
 
-    abstract fun bindInputs(gatesMap: Map<Int,MTGate>)
+    // 2nd pass
+    abstract fun bindGates(gatesMap: Map<Int, MTGate>)
 
     protected fun errorGateNotFound(gateId: Int): Nothing {
         error("Missing gate #$gateId")
@@ -73,7 +74,7 @@ abstract class MTUnaryGate(
 ): MTLogicGate(threadSize) {
     protected lateinit var input: MTGate
 
-    override fun bindInputs(gatesMap: Map<Int, MTGate>) {
+    override fun bindGates(gatesMap: Map<Int, MTGate>) {
         input = gatesMap[inputId] ?: errorGateNotFound(inputId)
     }
 
@@ -111,7 +112,7 @@ abstract class MTBinaryGate(
     override val level
         get() = max(input1.level, input2.level)
 
-    override fun bindInputs(gatesMap: Map<Int, MTGate>) {
+    override fun bindGates(gatesMap: Map<Int, MTGate>) {
         input1 = gatesMap[inputId1] ?: errorGateNotFound(inputId1)
         input2 = gatesMap[inputId2] ?: errorGateNotFound(inputId2)
     }
@@ -140,7 +141,7 @@ abstract class MTMultiGate(
     override val level: Int
         get() = inputs.maxOf { it.level } + 1
 
-    override fun bindInputs(gatesMap: Map<Int, MTGate>) {
+    override fun bindGates(gatesMap: Map<Int, MTGate>) {
         inputs = inputIds.map { gatesMap[it] ?: errorGateNotFound(it) }
     }
 }

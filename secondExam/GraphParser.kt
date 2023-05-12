@@ -12,14 +12,26 @@ import skipSpCrLfTab
 import skipSpace
 
 abstract class GraphParser<T : Gate> {
+    companion object {
+        private const val INPUT_NAME = "INPUT"
+        private const val OUTPUT_NAME = "OUTPUT"
+    }
 
     private fun Lexer.expectComment() {
         this.expect("#")
         this.readTill("\r\n")
     }
 
-    private fun Lexer.expectIO(ioName: String): Int {
-        this.expect(ioName)
+    private enum class IOType(val type: String) {
+        INPUT(INPUT_NAME),
+        OUTPUT(OUTPUT_NAME)
+    }
+
+    /**
+     * Read identifier for `INPUT` or `OUTPUT`
+     */
+    private fun Lexer.expectId(type: IOType): Int {
+        this.expect(type.type)
         this.skipSpace()
         this.expect("(")
         this.skipSpace()
@@ -30,9 +42,7 @@ abstract class GraphParser<T : Gate> {
         return id
     }
 
-    private fun <T> Lexer.expectGate(
-        build: (List<Int>) -> T
-    ): T {
+    private fun Lexer.expectInputIds(): List<Int> {
         this.skipSpace()
         this.expect("(")
         this.skipSpace()
@@ -46,21 +56,19 @@ abstract class GraphParser<T : Gate> {
             this.skipSpace()
         }
         this.expect(")")
-        return build(inputIds)
+        return inputIds
     }
 
     abstract fun createGate(type: String, inputIds: List<Int>): T
 
-    private fun Lexer.expectGateWithId(): Pair<Int, T> {
+    private fun Lexer.expectGateDef(): Pair<Int, T> {
         val id = this.readDigits()
         this.skipSpace()
         this.expect("=")
         this.skipSpace()
 
         val type = this.readAlphabet()
-        val gate = this.expectGate {
-            this@GraphParser.createGate(type, it)
-        }
+        val gate = createGate(type, expectInputIds())
 
         return Pair(id, gate)
     }
@@ -69,26 +77,23 @@ abstract class GraphParser<T : Gate> {
         val inputIds = mutableListOf<Int>()
         val outputIds = mutableListOf<Int>()
         val gates = mutableMapOf<Int, T>()
-        val inputString = "INPUT"
-        val outputString = "OUTPUT"
 
         lexer.skipSpCrLfTab()
 
         while (!lexer.probeEOF()) {
-
             if (lexer.probe("#")) {
                 lexer.expectComment()
             }
-            else if (lexer.probe(inputString)) {
-                val id = lexer.expectIO(inputString)
+            else if (lexer.probe(INPUT_NAME)) {
+                val id = lexer.expectId(IOType.INPUT)
                 inputIds.add(id)
             }
-            else if (lexer.probe(outputString)) {
-                val id = lexer.expectIO(outputString)
+            else if (lexer.probe(OUTPUT_NAME)) {
+                val id = lexer.expectId(IOType.OUTPUT)
                 outputIds.add(id)
             }
             else if (lexer.probeDigits()) {
-                val (id, gate) = lexer.expectGateWithId()
+                val (id, gate) = lexer.expectGateDef()
                 gates[id] = gate
             }
             else {
@@ -103,7 +108,7 @@ abstract class GraphParser<T : Gate> {
     data class ParsingResult<T: Gate>(
         val inputIds: List<Int>,
         val outputIds: List<Int>,
-        val gates: Map<Int,T>
+        val gates: Map<Int, T>
     )
 }
 
@@ -113,7 +118,7 @@ class DefaultGraphParser private constructor(): GraphParser<LogicGate>() {
     }
 
     override fun createGate(type: String, inputIds: List<Int>): LogicGate {
-        return stGateFactories[type]?.create(inputIds)
+        return DefaultGateFactories[type]?.create(inputIds)
             ?: error("CANNOT CREATE GATE '$type'")
     }
 }
