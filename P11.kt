@@ -1,151 +1,11 @@
+import secondExam.Lexer
+import secondExam.expect
+import secondExam.probe
 import java.io.FileInputStream
 import java.io.InputStream
-import java.util.*
 
-const val EOF = -1
-
-open class Lexer(private val input: InputStream): InputStream() {
-
-    private data class Node(
-        val data: Int,
-        var next: Node? = null
-    )
-    private var _putbackHead: Node? = null
-
-    private fun putback(value: Int) {
-        _putbackHead = Node(value, _putbackHead)
-    }
-
-    fun putbackString(): String {
-        val sb = StringBuilder()
-        var node = _putbackHead
-        while (node != null) {
-            sb.append("${node.data} ")
-            node = node.next
-        }
-        return sb.toString()
-    }
-
-    fun probe(vararg data: Int): Boolean {
-        if (data.isEmpty()) { return false }
-
-        var putback: Node? = null
-
-        try {
-            for (element in data) {
-                val read: Int = read()
-
-                if (read != EOF) {
-                    putback = Node(read, putback)
-                }
-
-                if (element != read) {
-                    return false
-                }
-            }
-            return true
-        }
-        finally {
-            var node = putback
-            while (node != null) {
-                putback(node.data)
-                node = node.next
-            }
-        }
-    }
-
-    fun peek() : Int? {
-        val read = read()
-        if (read != EOF) {
-            putback(read)
-        }
-        return read.takeIf { it != EOF }
-    }
-
-    fun readTill(vararg data: Int): String {
-        val sb = StringBuilder()
-        while (!probe(*data)) {
-            val read = read()
-            if (read < 0) { break }
-            sb.append(Char(read))
-        }
-        return sb.toString()
-    }
-
-    fun skip(vararg options: Int) {
-        var read = read()
-        while (read in options && read != EOF) {
-            read = read()
-        }
-        if (read != EOF) {
-            putback(read)
-        }
-    }
-
-    override fun read(): Int {
-        val data = _putbackHead?.data ?: input.read()
-        _putbackHead = _putbackHead?.next
-        return data
-    }
-}
-
-const val SPACE = ' '
 //const val CR = '\r'
 //const val LF = '\n'
-
-fun Lexer.readDigits(): Int {
-    val sb = StringBuilder()
-    while (probeDigits()) {
-        sb.append(Char(read()))
-    }
-    return sb.toString().toInt()
-}
-
-fun Lexer.probeDigits(): Boolean {
-    val nextIsDigit = peek()?.let { Char(it).isDigit() }
-
-    return nextIsDigit == true
-}
-
-fun Lexer.readTill(string: String): String {
-    return readTill(*string.toIntArray())
-}
-
-fun Lexer.skip(vararg options: Char) {
-    options.map { it.code }.toIntArray().let { skip(*it) }
-}
-
-fun Lexer.skipSpace() {
-    skip(' ')
-}
-
-fun Lexer.skipSpCrLfTab() {
-    skip(' ', '\r', '\n', '\t')
-}
-
-fun Lexer.expect(string: String) {
-    expect(*string.toIntArray())
-}
-fun Lexer.expectCrLf() = expect("\r\n")
-fun Lexer.expectEOF() = expect(-1)
-
-fun Lexer.probe(string: String) = probe(*string.toIntArray())
-fun Lexer.probeCrLf(): Boolean = probe("\r\n")
-fun Lexer.probeAlphabet(): Boolean {
-    val nextIsAlphabet = peek()
-        ?.let { it in 'a'.code..'z'.code || it in 'A'.code..'Z'.code }
-    return nextIsAlphabet == true
-}
-
-fun Lexer.readAlphabet(): String {
-    val sb = StringBuilder()
-    while (probeAlphabet()) {
-        sb.append(Char(read()))
-    }
-    return sb.toString()
-}
-
-fun Lexer.probeEOF(): Boolean = probe(-1)
 
 fun InputStream.fillUpOrZero(array: ByteArray, off: Int, len: Int = array.size - off) {
     var filled = 0
@@ -225,8 +85,6 @@ fun ByteArray.moveForwardFrom(from: Int): ByteArray {
 }
 
 // filter, map
-private fun String.toIntArray() =
-    map { it.code }.toIntArray()
 
 private fun ByteArray.toIntArray() = IntArray(this.size) { this[it].toInt() }
 

@@ -1,6 +1,5 @@
 package secondExam
 
-import Lexer
 import java.io.FileInputStream
 import java.io.InputStream
 

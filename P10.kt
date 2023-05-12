@@ -133,7 +133,7 @@ class ChunkInputStream(
 fun InputStream.expectCRLF() {
     expect('\r'.code, '\n'.code)
 }
-fun InputStream.expectEOF() { // EOF: end of file
+fun InputStream.expectEOF() { // secondExam.EOF: end of file
     expect(-1)
 }
 fun InputStream.expect(vararg data: Int) {
@@ -202,7 +202,7 @@ fun InputStream.readTill(vararg data: Int): String {
                 break
             }
             else { //[\r,d,c]
-                //TODO: BUGGY WHEN THE STREAM REACHES EOF.
+                //TODO: BUGGY WHEN THE STREAM REACHES secondExam.EOF.
                 array.forEach { result += Char(it) }
             }
         }
