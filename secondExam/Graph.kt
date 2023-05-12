@@ -1,19 +1,17 @@
 package secondExam
 
-import java.util.LinkedList
-
 private const val FILE_NAME = "C:\\Users\\A273\\Desktop\\c17.txt"
 //private const val FILE_NAME = "C:\\Users\\A273\\Desktop\\c432.txt"
 
-interface GraphI {
+interface Graph {
     fun evaluateAll()
 }
 
-class Graph(
+class DefaultGraph(
     private val inputsMap: Map<Int, InputGate>,
     private val outputsMap: Map<Int, Gate>,
     private val levels: Array<out List<Gate>>
-): GraphI {
+): Graph {
     val inputGates: List<InputGate> by lazy { inputsMap.values.toList() }
 
     val inputIds get() = inputsMap.keys

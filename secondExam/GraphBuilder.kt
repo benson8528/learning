@@ -8,7 +8,6 @@ import java.io.InputStream
 //  +- DefaultGraphParser
 //  +- MTGraphParser
 
-
 // Design pattern
 //  - Singleton
 //  - Factory

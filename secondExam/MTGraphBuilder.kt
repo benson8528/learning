@@ -9,7 +9,7 @@ class MTGraphParser(private val threadSize: Int): GraphParser<MTLogicGate>() {
 }
 
 open class MTGraphBuilder protected constructor(protected val threadSize: Int)
-: GraphBuilder<MTLogicGate, MTInputGate>() {
+: AbstractGraphBuilder<MTLogicGate, MTInputGate>() {
     companion object {
         private val builders = mutableMapOf<Int,MTGraphBuilder>()
         fun getBuilder(threadSize: Int): MTGraphBuilder {
@@ -34,7 +34,7 @@ open class MTGraphBuilder protected constructor(protected val threadSize: Int)
         inputsMap: Map<Int, MTInputGate>,
         outputsMap: Map<Int, MTLogicGate>,
         levels: Array<List<MTLogicGate>>
-    ): GraphI {
+    ): Graph {
         return MTGraph(inputsMap, outputsMap, levels, threadSize)
     }
 
@@ -58,7 +58,7 @@ class CoroutineMTGraphBuilder private constructor(threadSize: Int) : MTGraphBuil
         inputsMap: Map<Int, MTInputGate>,
         outputsMap: Map<Int, MTLogicGate>,
         levels: Array<List<MTLogicGate>>
-    ): GraphI {
+    ): Graph {
         return CoroutineMTGraph(inputsMap, outputsMap, levels, threadSize)
     }
 }
@@ -76,7 +76,7 @@ class ThreadPoolMTGraphBuilder private constructor(threadSize: Int): MTGraphBuil
         inputsMap: Map<Int, MTInputGate>,
         outputsMap: Map<Int, MTLogicGate>,
         levels: Array<List<MTLogicGate>>
-    ): GraphI {
+    ): Graph {
         return ThreadPoolMTGraph(inputsMap, outputsMap, levels, threadSize)
     }
 }

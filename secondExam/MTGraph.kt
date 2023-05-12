@@ -24,7 +24,7 @@ open class MTGraph(
     private val outputsMap: Map<Int, MTGate>,
     private val levels: Array<out List<MTGate>>,
     protected val threadSize: Int
-): GraphI {
+): Graph {
 
     val inputGates: List<MTInputGate> by lazy { inputsMap.values.toList() }
 
