@@ -6,10 +6,10 @@ import kotlin.concurrent.thread
 private const val MIN_CPU_SIZE = 1
 private const val MAX_CPU_SIZE = 8
 
-private const val FACTORIAL_N = 10
-private const val FACTORIAL_TIMES = 20_000
+const val FACTORIAL_N = 10
+const val FACTORIAL_TIMES = 20_000
 
-private const val PERM_LIMIT = 600_000
+const val PERM_LIMIT = 600_000
 
 fun testCase(numOfThreads: Int, totalTimes: Int) {
     val queues = Array(numOfThreads) {

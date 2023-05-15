@@ -148,24 +148,67 @@ abstract class MTMultiGate(
 
 class MTAndGate(inputIds: List<Int>, threadSize: Int): MTMultiGate(inputIds ,threadSize) {
     override fun doEvaluate(index: Int): Boolean {
-        return inputs.all { it.outputs[index] }
+        var i = 0
+        while (i < inputs.size) {
+            if (!inputs[i].outputs[index]) {
+                return false
+            }
+            i++
+        }
+        return true
+//        return inputs.all { it.outputs[index] }
     }
 }
+
+//fun <T> Iterable<T>.all2(predicate: (T) -> Boolean): Boolean {
+//    val iter = iterator()
+//    while (iter.hasNext()) {
+//        if (!predicate(iter.next())) {
+//            return false
+//        }
+//    }
+//    return true
+//}
+
 class MTNandGate(inputIds: List<Int>, threadSize: Int): MTMultiGate(inputIds, threadSize) {
     override fun doEvaluate(index: Int): Boolean {
-        return !inputs.all { it.outputs[index] }
+        var i = 0
+        while (i < inputs.size) {
+            if (!inputs[i].outputs[index]) {
+                return true
+            }
+            i++
+        }
+        return false
+//        return !inputs.all { it.outputs[index] }
     }
 }
 
 class MTOrGate(inputIds: List<Int>, threadSize: Int): MTMultiGate(inputIds, threadSize) {
     override fun doEvaluate(index: Int): Boolean {
-        return inputs.any { it.outputs[index] }
+        var i = 0
+        while (i < inputs.size) {
+            if (inputs[i].outputs[index]) {
+                return true
+            }
+            i++
+        }
+        return false
+//        return inputs.any { it.outputs[index] }
     }
 }
 
 class MTNorGate(inputIds: List<Int>, threadSize: Int): MTMultiGate(inputIds, threadSize) {
     override fun doEvaluate(index: Int): Boolean {
-        return !inputs.any { it.outputs[index] }
+        var i = 0
+        while (i < inputs.size) {
+            if (inputs[i].outputs[index]) {
+                return false
+            }
+            i++
+        }
+        return true
+//        return !inputs.any { it.outputs[index] }
     }
 }
 //</editor-fold>

@@ -6,8 +6,10 @@ import java.util.*
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
+
+
 private const val FILE_NAME = "C:\\Users\\A273\\Desktop\\c432.txt"
-private const val LIMIT_SIZE = 8_000_000
+private const val LIMIT_SIZE = 4_000_000
 
 //private const val FILE_NAME = "C:\\Users\\A273\\Desktop\\c7552.txt"
 //private const val LIMIT_SIZE = 1_000_000
@@ -40,9 +42,12 @@ open class MTGraph(
 
     private fun printGraphInformation() {
         println("--- MTGraph with $threadSize threads")
+        println("# of gates in each level: ")
         for (level in levels.indices) {
-            println("# of gates in level $level: ${levels[level].size}")
+            print("${levels[level].size} ")
+//            println("# of gates in level $level: ${levels[level].size}")
         }
+        println()
         println("--- ")
     }
 
@@ -87,7 +92,6 @@ open class MTGraph(
             .map { index ->
                 thread {
                     evaluate(index, perms[index])
-//                    GateEvaluationTask(perms[index], index).run()
                 }
             }
             .forEach { thread ->
@@ -103,6 +107,8 @@ open class MTGraph(
             count++
             setInput(index, inputs)
             evaluate(index)
+
+//            repeatFactorial(FACTORIAL_N, FACTORIAL_TIMES/threadSize)
         }
         val end = System.currentTimeMillis()
         println("${index}th thread takes $count inputs, runs ${end - start} ms")
@@ -110,11 +116,17 @@ open class MTGraph(
 
     fun evaluate(index: Int) {
 //        for (level in levels) {
-        for (i in 1 until levels.size) {
+        var i = 0
+        while (i < levels.size) {
             val level = levels[i]
-            for (gate in level) {
+//            for (gate in level) {
+            var j = 0
+            while (j < level.size) {
+                val gate = level[j]
                 gate.evaluate(index)
+                j++
             }
+            i++
         }
     }
 
