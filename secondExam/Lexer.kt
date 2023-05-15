@@ -59,8 +59,9 @@ open class Lexer(private val input: InputStream): InputStream() {
 
         while (!probeEOF()) {
             val peek = peek() ?: break
-            if (acceptingOptions.any { peek in it }) {
-                sb.append(Char(read()))
+            when (acceptingOptions.any { peek in it }) {
+                true -> sb.append(Char(read()))
+                false -> break
             }
         }
 
