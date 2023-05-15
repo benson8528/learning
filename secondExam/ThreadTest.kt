@@ -3,7 +3,7 @@ package secondExam
 import java.util.LinkedList
 import kotlin.concurrent.thread
 
-private const val MIN_CPU_SIZE = 2
+private const val MIN_CPU_SIZE = 1
 private const val MAX_CPU_SIZE = 8
 
 private const val FACTORIAL_N = 10
@@ -11,17 +11,15 @@ private const val FACTORIAL_TIMES = 20_000
 
 private const val PERM_LIMIT = 600_000
 
-private fun testCase(numOfThreads: Int, totalTimes: Int) {
+fun testCase(numOfThreads: Int, totalTimes: Int) {
     val queues = Array(numOfThreads) {
         LinkedList<Array<Boolean>>()
-//        LinkedList<Int>()
     }
 
     val perm =  LimitedInputPermutation(36, PERM_LIMIT)
 
     thread {
         var index = 0
-//        repeat(PERM_LIMIT){
         while (perm.hasNext()) {
             queues[index++].addLast(perm.next())
             index %= numOfThreads
@@ -64,8 +62,9 @@ fun factorial(n: Int): Int {
 }
 
 
-fun main() {
 
+
+fun main() {
     for (i in MIN_CPU_SIZE .. MAX_CPU_SIZE) {
         println("------------------------")
         val time = measureTime {

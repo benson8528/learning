@@ -99,38 +99,6 @@ class LimitedInputPermutation(
     }
 }
 
-//class ThreadSafeInputPermutation(size: Int): InputPermutation(size) {
-//    override fun hasNext(): Boolean {
-//        synchronized(this) {
-//            return super.hasNext()
-//        }
-//    }
-//
-//    override fun next(): Array<Boolean> {
-//        synchronized(this) {
-//            return super.next()
-//        }
-//    }
-//}
-
 fun Array<Boolean>.copy(): Array<Boolean> {
     return copyOfRange(0, size)
-}
-
-class TestThread: Thread() {
-    companion object {
-        val perm = InputPermutation(28)
-    }
-    override fun run() {
-        while (perm.hasNext()) {
-            perm.next()
-
-        }
-//        measure {
-//            while (perm.hasNext()) {
-//                perm.next()
-//
-//            }
-//        }
-    }
 }

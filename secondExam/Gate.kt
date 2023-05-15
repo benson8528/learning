@@ -28,9 +28,12 @@ interface InputGateI: Gate {
 //      +- BuffGate
 //  +- BinaryGate
 //      +- XorGate
+//      +- XnorGate
 //  +- MultiGate
 //      +- AndGate
-//      ...
+//      +- NandGate
+//      +- OrGate
+//      +- NorGate
 
 abstract class LogicGate: Gate {
     private var _output: Boolean = false

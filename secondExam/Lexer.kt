@@ -1,6 +1,6 @@
 package secondExam
 
-import expect
+//import expect
 import java.io.InputStream
 
 const val EOF = -1
@@ -128,6 +128,14 @@ fun Lexer.skipSpCrLfTab() {
 fun Lexer.probe(string: String) = probe(*string.toIntArray())
 fun Lexer.expect(string: String) {
     expect(*string.toIntArray())
+}
+fun Lexer.expect(vararg data: Int) {
+    expect(data, 0, data.size)
+}
+fun Lexer.expect(data: IntArray, offset: Int, len: Int) {
+    for (i in offset until offset + len) {
+        require(read() == data[i])
+    }
 }
 
 fun Lexer.probeCrLf(): Boolean = probe("\r\n")
